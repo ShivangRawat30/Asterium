@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20}    from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import {IAsterDEXEarn}  from "./interfaces/IAsterDEXEarn.sol";
+import {IAsterDEXEarn} from "./interfaces/IAsterDEXEarn.sol";
 import {IPancakeLPVault} from "./interfaces/IPancakeLPVault.sol";
 
 /// @title  StrategyManager — Protocol Interaction Layer
@@ -25,9 +25,9 @@ contract StrategyManager {
     //                      IMMUTABLES
     // ═══════════════════════════════════════════════════════
 
-    IERC20           public immutable usdt;
-    IAsterDEXEarn    public immutable asterDEX;
-    IPancakeLPVault  public immutable pancakeLP;
+    IERC20 public immutable usdt;
+    IAsterDEXEarn public immutable asterDEX;
+    IPancakeLPVault public immutable pancakeLP;
 
     // ═══════════════════════════════════════════════════════
     //                   VAULT BINDING
@@ -63,17 +63,14 @@ contract StrategyManager {
     /// @param _asterDEX  AsterDEX Earn adapter
     /// @param _pancakeLP PancakeSwap LP adapter
     constructor(address _usdt, address _asterDEX, address _pancakeLP) {
-        require(
-            _usdt != address(0) && _asterDEX != address(0) && _pancakeLP != address(0),
-            "SM: zero address"
-        );
+        require(_usdt != address(0) && _asterDEX != address(0) && _pancakeLP != address(0), "SM: zero address");
 
-        usdt      = IERC20(_usdt);
-        asterDEX  = IAsterDEXEarn(_asterDEX);
+        usdt = IERC20(_usdt);
+        asterDEX = IAsterDEXEarn(_asterDEX);
         pancakeLP = IPancakeLPVault(_pancakeLP);
 
         // One-time infinite approval to external protocols
-        IERC20(_usdt).forceApprove(_asterDEX,  type(uint256).max);
+        IERC20(_usdt).forceApprove(_asterDEX, type(uint256).max);
         IERC20(_usdt).forceApprove(_pancakeLP, type(uint256).max);
     }
 
@@ -115,7 +112,7 @@ contract StrategyManager {
             uint256 needed = amount - idle;
 
             // 1. AsterDEX Earn (primary, more liquid)
-            uint256 dexBal  = _asterDEXBalance();
+            uint256 dexBal = _asterDEXBalance();
             uint256 fromDex = _min(needed, dexBal);
             if (fromDex > 0) {
                 asterDEX.withdraw(fromDex);
@@ -129,7 +126,7 @@ contract StrategyManager {
         }
 
         uint256 available = usdt.balanceOf(address(this));
-        uint256 toSend    = _min(available, amount);
+        uint256 toSend = _min(available, amount);
         if (toSend > 0) {
             usdt.safeTransfer(vault, toSend);
         }
@@ -139,13 +136,13 @@ contract StrategyManager {
     /// @notice Move capital from AsterDEX Earn → PancakeSwap LP
     /// @param amount USDT amount to shift
     function moveToLP(uint256 amount) external onlyVault {
-        uint256 dexBal     = _asterDEXBalance();
+        uint256 dexBal = _asterDEXBalance();
         uint256 toWithdraw = _min(amount, dexBal);
         if (toWithdraw > 0) {
             asterDEX.withdraw(toWithdraw);
         }
         uint256 available = usdt.balanceOf(address(this));
-        uint256 toLp      = _min(amount, available);
+        uint256 toLp = _min(amount, available);
         if (toLp > 0) {
             pancakeLP.addLiquidity(toLp);
         }

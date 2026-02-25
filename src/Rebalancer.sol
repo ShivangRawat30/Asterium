@@ -26,8 +26,8 @@ contract Rebalancer {
     /// @param moveToLP True → move AsterDEX → LP · False → move LP → AsterDEX
     /// @param amount   USDT quantity to move
     struct RebalanceAction {
-        bool    needed;
-        bool    moveToLP;
+        bool needed;
+        bool moveToLP;
         uint256 amount;
     }
 
@@ -41,17 +41,14 @@ contract Rebalancer {
     /// @param balancedShares     Total shares held by Balanced users
     /// @param aggressiveShares   Total shares held by Aggressive users
     /// @return Target LP allocation in basis points (0-10 000)
-    function computeTargetLPBps(
-        uint256 conservativeShares,
-        uint256 balancedShares,
-        uint256 aggressiveShares
-    ) external pure returns (uint256) {
+    function computeTargetLPBps(uint256 conservativeShares, uint256 balancedShares, uint256 aggressiveShares)
+        external
+        pure
+        returns (uint256)
+    {
         uint256 total = conservativeShares + balancedShares + aggressiveShares;
         if (total == 0) return 2000; // default 20 % LP when vault is empty
-        return
-            (conservativeShares * 2000 +
-                balancedShares * 5000 +
-                aggressiveShares * 8000) / total;
+        return (conservativeShares * 2000 + balancedShares * 5000 + aggressiveShares * 8000) / total;
     }
 
     /// @notice Determine whether a rebalance is needed and what action to take
@@ -59,33 +56,27 @@ contract Rebalancer {
     /// @param currentLPAssets Current USDT value held in PancakeSwap LP
     /// @param targetLPBps    Desired LP allocation in basis points
     /// @return action The rebalance instruction (may have `needed == false`)
-    function checkRebalance(
-        uint256 totalAssets,
-        uint256 currentLPAssets,
-        uint256 targetLPBps
-    ) external pure returns (RebalanceAction memory action) {
+    function checkRebalance(uint256 totalAssets, uint256 currentLPAssets, uint256 targetLPBps)
+        external
+        pure
+        returns (RebalanceAction memory action)
+    {
         if (totalAssets == 0) return action; // nothing to rebalance
 
-        uint256 currentLPBps  = (currentLPAssets * BPS) / totalAssets;
+        uint256 currentLPBps = (currentLPAssets * BPS) / totalAssets;
         uint256 targetLPAmount = (totalAssets * targetLPBps) / BPS;
 
         // Over-exposed to LP → move excess back to AsterDEX Earn
-        if (
-            currentLPBps > targetLPBps &&
-            currentLPBps - targetLPBps > DEVIATION_THRESHOLD_BPS
-        ) {
-            action.needed   = true;
+        if (currentLPBps > targetLPBps && currentLPBps - targetLPBps > DEVIATION_THRESHOLD_BPS) {
+            action.needed = true;
             action.moveToLP = false;
-            action.amount   = currentLPAssets - targetLPAmount;
+            action.amount = currentLPAssets - targetLPAmount;
         }
         // Under-exposed to LP → move shortfall from AsterDEX to LP
-        else if (
-            targetLPBps > currentLPBps &&
-            targetLPBps - currentLPBps > DEVIATION_THRESHOLD_BPS
-        ) {
-            action.needed   = true;
+        else if (targetLPBps > currentLPBps && targetLPBps - currentLPBps > DEVIATION_THRESHOLD_BPS) {
+            action.needed = true;
             action.moveToLP = true;
-            action.amount   = targetLPAmount - currentLPAssets;
+            action.amount = targetLPAmount - currentLPAssets;
         }
         // Within tolerance → no action
     }

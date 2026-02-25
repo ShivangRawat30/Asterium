@@ -7,15 +7,13 @@ import {Strategy, EpochData, UserEpochEntry} from "./Types.sol";
 ///         retrieve epoch metrics and user snapshots without importing the
 ///         full Vault contract.
 interface IVault {
-    function getEpochData(uint256 epoch)
-        external view returns (EpochData memory);
+    function getEpochData(uint256 epoch) external view returns (EpochData memory);
 
-    function getUserEpochEntry(address user, uint256 epoch)
-        external view returns (UserEpochEntry memory);
+    function getUserEpochEntry(address user, uint256 epoch) external view returns (UserEpochEntry memory);
 
     function currentEpoch() external view returns (uint256);
-    function sharePrice()   external view returns (uint256);
-    function totalShares()  external view returns (uint256);
+    function sharePrice() external view returns (uint256);
+    function totalShares() external view returns (uint256);
     function userShares(address user) external view returns (uint256);
 }
 
@@ -69,11 +67,7 @@ contract Tournament {
     //                        EVENTS
     // ═══════════════════════════════════════════════════════
 
-    event PointsClaimed(
-        address indexed user,
-        uint256 indexed epoch,
-        uint256 points
-    );
+    event PointsClaimed(address indexed user, uint256 indexed epoch, uint256 points);
 
     // ═══════════════════════════════════════════════════════
     //                     CONSTRUCTOR
@@ -94,7 +88,7 @@ contract Tournament {
     /// @return points Points earned (1e18-scaled)
     function claimPoints(uint256 epoch) external returns (uint256 points) {
         require(!claimed[msg.sender][epoch], "T: already claimed");
-        require(epoch < vault.currentEpoch(),  "T: epoch not ended");
+        require(epoch < vault.currentEpoch(), "T: epoch not ended");
 
         // ── Read epoch data ─────────────────────────────────
         EpochData memory ep = vault.getEpochData(epoch);
@@ -115,8 +109,7 @@ contract Tournament {
             return 0;
         }
 
-        uint256 roi = ((ep.endSharePrice - entry.entrySharePrice) * PRECISION)
-            / entry.entrySharePrice;
+        uint256 roi = ((ep.endSharePrice - entry.entrySharePrice) * PRECISION) / entry.entrySharePrice;
 
         // ── Vault Drawdown ──────────────────────────────────
         uint256 drawdown = 0;
@@ -132,11 +125,10 @@ contract Tournament {
         //    multiplier     : raw {10, 13, 16}
         //    (P - drawdown) : 1e18-scaled
         //    Result         : 1e18-scaled after dividing by (DENOM × 1e18)
-        points = (roi * multiplier * (PRECISION - drawdown))
-            / (MULTIPLIER_DENOM * PRECISION);
+        points = (roi * multiplier * (PRECISION - drawdown)) / (MULTIPLIER_DENOM * PRECISION);
 
         totalPoints[msg.sender] += points;
-        totalPointsDistributed  += points;
+        totalPointsDistributed += points;
 
         emit PointsClaimed(msg.sender, epoch, points);
     }
@@ -147,11 +139,8 @@ contract Tournament {
 
     /// @notice Preview points for a given user and epoch (read-only)
     /// @return points Estimated points (0 if ineligible or already claimed)
-    function previewPoints(
-        address user,
-        uint256 epoch
-    ) external view returns (uint256 points) {
-        if (claimed[user][epoch])        return 0;
+    function previewPoints(address user, uint256 epoch) external view returns (uint256 points) {
+        if (claimed[user][epoch]) return 0;
         if (epoch >= vault.currentEpoch()) return 0;
 
         EpochData memory ep = vault.getEpochData(epoch);
@@ -161,8 +150,7 @@ contract Tournament {
         if (!entry.registered || entry.shares == 0) return 0;
         if (ep.endSharePrice <= entry.entrySharePrice) return 0;
 
-        uint256 roi = ((ep.endSharePrice - entry.entrySharePrice) * PRECISION)
-            / entry.entrySharePrice;
+        uint256 roi = ((ep.endSharePrice - entry.entrySharePrice) * PRECISION) / entry.entrySharePrice;
 
         uint256 drawdown = 0;
         if (ep.peak > 0 && ep.peak > ep.low) {
@@ -171,8 +159,7 @@ contract Tournament {
 
         uint256 multiplier = _strategyMultiplier(entry.strategy);
 
-        points = (roi * multiplier * (PRECISION - drawdown))
-            / (MULTIPLIER_DENOM * PRECISION);
+        points = (roi * multiplier * (PRECISION - drawdown)) / (MULTIPLIER_DENOM * PRECISION);
     }
 
     // ═══════════════════════════════════════════════════════
@@ -185,7 +172,7 @@ contract Tournament {
     ///      Aggressive   = 1.6× (16)
     function _strategyMultiplier(Strategy s) internal pure returns (uint256) {
         if (s == Strategy.Conservative) return 10;
-        if (s == Strategy.Balanced)     return 13;
+        if (s == Strategy.Balanced) return 13;
         return 16; // Aggressive
     }
 }

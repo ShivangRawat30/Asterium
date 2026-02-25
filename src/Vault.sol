@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20}          from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20}       from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 import {Strategy, EpochData, UserEpochEntry} from "./Types.sol";
-import {StrategyManager}                     from "./StrategyManager.sol";
-import {Rebalancer}                          from "./Rebalancer.sol";
+import {StrategyManager} from "./StrategyManager.sol";
+import {Rebalancer} from "./Rebalancer.sol";
 
 /// @title  Vault — Self-Driving Yield Vault
 /// @author AsterPilot
@@ -101,29 +101,11 @@ contract Vault is ReentrancyGuard {
     //                        EVENTS
     // ═══════════════════════════════════════════════════════
 
-    event Deposited(
-        address indexed user,
-        uint256 amount,
-        uint256 sharesMinted,
-        Strategy strategy
-    );
-    event Withdrawn(
-        address indexed user,
-        uint256 sharesBurned,
-        uint256 amountOut
-    );
-    event StrategyChanged(
-        address indexed user,
-        Strategy oldStrategy,
-        Strategy newStrategy
-    );
+    event Deposited(address indexed user, uint256 amount, uint256 sharesMinted, Strategy strategy);
+    event Withdrawn(address indexed user, uint256 sharesBurned, uint256 amountOut);
+    event StrategyChanged(address indexed user, Strategy oldStrategy, Strategy newStrategy);
     event Rebalanced(bool moveToLP, uint256 amount);
-    event EpochFinalized(
-        uint256 indexed epoch,
-        uint256 endSharePrice,
-        uint256 peak,
-        uint256 low
-    );
+    event EpochFinalized(uint256 indexed epoch, uint256 endSharePrice, uint256 peak, uint256 low);
 
     // ═══════════════════════════════════════════════════════
     //                     CONSTRUCTOR
@@ -132,18 +114,14 @@ contract Vault is ReentrancyGuard {
     /// @param _usdt            BEP-20 USDT address on BNB Chain
     /// @param _strategyManager Deployed StrategyManager (must call bindVault after)
     /// @param _rebalancer      Deployed Rebalancer
-    constructor(
-        address _usdt,
-        address _strategyManager,
-        address _rebalancer
-    ) {
+    constructor(address _usdt, address _strategyManager, address _rebalancer) {
         require(_usdt != address(0), "V: zero usdt");
         require(_strategyManager != address(0), "V: zero sm");
         require(_rebalancer != address(0), "V: zero rb");
 
-        usdt            = IERC20(_usdt);
+        usdt = IERC20(_usdt);
         strategyManager = StrategyManager(_strategyManager);
-        rebalancer      = Rebalancer(_rebalancer);
+        rebalancer = Rebalancer(_rebalancer);
         genesisTimestamp = block.timestamp;
     }
 
@@ -162,7 +140,7 @@ contract Vault is ReentrancyGuard {
         _updateEpochMetrics();
 
         // ── Compute shares BEFORE token transfer (ERC-4626 pattern) ──
-        uint256 totalBefore  = totalAssets();
+        uint256 totalBefore = totalAssets();
         uint256 sharesToMint;
         if (totalShares == 0 || totalBefore == 0) {
             sharesToMint = amount; // 1:1 on first deposit
@@ -208,7 +186,7 @@ contract Vault is ReentrancyGuard {
 
         // ── Compute USDT payout ─────────────────────────────
         uint256 totalBefore = totalAssets();
-        uint256 amountOut   = (shares * totalBefore) / totalShares;
+        uint256 amountOut = (shares * totalBefore) / totalShares;
 
         // ── Update strategy weights ─────────────────────────
         _subtractWeight(msg.sender, userShares[msg.sender]);
@@ -291,11 +269,7 @@ contract Vault is ReentrancyGuard {
 
     /// @notice Weighted-average target LP allocation (basis points)
     function targetLPBps() public view returns (uint256) {
-        return rebalancer.computeTargetLPBps(
-            conservativeShares,
-            balancedShares,
-            aggressiveShares
-        );
+        return rebalancer.computeTargetLPBps(conservativeShares, balancedShares, aggressiveShares);
     }
 
     /// @notice Read epoch performance data
@@ -304,10 +278,7 @@ contract Vault is ReentrancyGuard {
     }
 
     /// @notice Read a user's epoch-entry snapshot
-    function getUserEpochEntry(
-        address user,
-        uint256 epoch
-    ) external view returns (UserEpochEntry memory) {
+    function getUserEpochEntry(address user, uint256 epoch) external view returns (UserEpochEntry memory) {
         return _userEpochEntries[user][epoch];
     }
 
@@ -320,14 +291,10 @@ contract Vault is ReentrancyGuard {
         uint256 total = totalAssets();
         if (total == 0) return;
 
-        uint256 lpVal      = strategyManager.lpAssets();
+        uint256 lpVal = strategyManager.lpAssets();
         uint256 _targetBps = targetLPBps();
 
-        Rebalancer.RebalanceAction memory action = rebalancer.checkRebalance(
-            total,
-            lpVal,
-            _targetBps
-        );
+        Rebalancer.RebalanceAction memory action = rebalancer.checkRebalance(total, lpVal, _targetBps);
 
         if (action.needed) {
             if (action.moveToLP) {
@@ -343,7 +310,7 @@ contract Vault is ReentrancyGuard {
     ///      Bounded to 12 iterations (one year of catch-up) to cap gas.
     function _finalizeStaleEpochs() internal {
         uint256 current = currentEpoch();
-        uint256 start   = lastFinalizedEpoch;
+        uint256 start = lastFinalizedEpoch;
 
         // Bound iteration to prevent excessive gas in degenerate cases
         uint256 end = current;
@@ -353,14 +320,16 @@ contract Vault is ReentrancyGuard {
 
         uint256 price = sharePrice();
 
-        for (uint256 i = start; i < end; ) {
+        for (uint256 i = start; i < end;) {
             EpochData storage ep = _epochs[i];
             if (!ep.finalized) {
                 ep.endSharePrice = price;
-                ep.finalized     = true;
+                ep.finalized = true;
                 emit EpochFinalized(i, price, ep.peak, ep.low);
             }
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
 
         lastFinalizedEpoch = end;
@@ -369,8 +338,8 @@ contract Vault is ReentrancyGuard {
         EpochData storage curr = _epochs[current];
         if (curr.startSharePrice == 0 && totalShares > 0) {
             curr.startSharePrice = price;
-            curr.peak            = price;
-            curr.low             = price;
+            curr.peak = price;
+            curr.low = price;
         }
     }
 
@@ -391,26 +360,26 @@ contract Vault is ReentrancyGuard {
         UserEpochEntry storage entry = _userEpochEntries[user][current];
 
         if (!entry.registered) {
-            entry.shares          = userShares[user];
+            entry.shares = userShares[user];
             entry.entrySharePrice = sharePrice();
-            entry.strategy        = userStrategy[user];
-            entry.registered      = true;
+            entry.strategy = userStrategy[user];
+            entry.registered = true;
         }
     }
 
     /// @dev Add user's shares to the appropriate strategy bucket
     function _addWeight(address user, uint256 shares) internal {
         Strategy s = userStrategy[user];
-        if (s == Strategy.Conservative)      conservativeShares += shares;
-        else if (s == Strategy.Balanced)     balancedShares     += shares;
-        else /* Aggressive */                aggressiveShares   += shares;
+        if (s == Strategy.Conservative) conservativeShares += shares;
+        else if (s == Strategy.Balanced) balancedShares += shares; /* Aggressive */
+        else aggressiveShares += shares;
     }
 
     /// @dev Remove user's shares from the appropriate strategy bucket
     function _subtractWeight(address user, uint256 shares) internal {
         Strategy s = userStrategy[user];
-        if (s == Strategy.Conservative)      conservativeShares -= shares;
-        else if (s == Strategy.Balanced)     balancedShares     -= shares;
-        else /* Aggressive */                aggressiveShares   -= shares;
+        if (s == Strategy.Conservative) conservativeShares -= shares;
+        else if (s == Strategy.Balanced) balancedShares -= shares; /* Aggressive */
+        else aggressiveShares -= shares;
     }
 }
