@@ -22,7 +22,7 @@ A **fully autonomous, production-grade smart contract system** for BNB Chain tha
 
 ## Executive Summary
 
-**AsterPilot** is a yield aggregation protocol that:
+**Asterium** is a yield aggregation protocol that:
 
 - **Pools user capital** in a single vault accepting USDT deposits
 - **Deploys capital** to AsterDEX Earn (primary yield engine) and PancakeSwap LP using user-selected strategies
@@ -31,7 +31,7 @@ A **fully autonomous, production-grade smart contract system** for BNB Chain tha
 - **Scores participants** using a formula: `Points = ROI × StrategyMultiplier × (1 − VaultDrawdown)`
 - **Operates autonomously** with zero admin intervention, no upgradeable proxy, no owner functions
 
-### Why AsterPilot?
+### Why Asterium?
 
 - **Trustless competition**: Transparent scoring, user self-claims revenue
 - **Capital efficiency**: Pooled model spreads gas costs; weighted rebalancing optimizes allocation
@@ -608,4 +608,4 @@ const totalPoints = await tournament.totalPoints(userAddress);
 
 ---
 
-*AsterPilot v1.0 | BNB Chain | Solidity ^0.8.20*
+*Asterium v1.0 | BNB Chain | Solidity ^0.8.20*
